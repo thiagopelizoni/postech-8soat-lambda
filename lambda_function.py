@@ -1,6 +1,7 @@
 import os
 import psycopg2
 import json
+import bcrypt
 
 def lambda_handler(event, context):
     db_host = os.getenv("DB_HOST").split(':')[0]
@@ -12,6 +13,7 @@ def lambda_handler(event, context):
     try:
         connection = psycopg2.connect(
             host=db_host,
+            port=db_port,
             database=db_name,
             user=db_user,
             password=db_password
@@ -31,17 +33,31 @@ def lambda_handler(event, context):
         if not cpf or not senha:
             return {
                 "statusCode": 400,
-                "body": json.dumps({"error": "CPF and password are required"})
+                "body": json.dumps({"error": "CPF e senha são requeridos!"})
             }
         
-        query = "SELECT 1 FROM clientes WHERE cpf = %s AND senha = %s"
-        cursor.execute(query, (cpf, senha))
+        query = "SELECT senha FROM clientes WHERE cpf = %s"
+        cursor.execute(query, (cpf,))
         result = cursor.fetchone()
         
-        return {
-            "statusCode": 200,
-            "body": json.dumps({"success": result is not None})
-        }
+        if not result:
+            return {
+                "statusCode": 200,
+                "body": json.dumps({"success": False})
+            }
+        
+        hashed_password = result[0]
+        
+        if bcrypt.checkpw(senha.encode('utf-8'), hashed_password.encode('utf-8')):
+            return {
+                "statusCode": 200,
+                "body": json.dumps({"success": True})
+            }
+        else:
+            return {
+                "statusCode": 200,
+                "body": json.dumps({"success": False})
+            }
     
     except psycopg2.Error as e:
         return {
