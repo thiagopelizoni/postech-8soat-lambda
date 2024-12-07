@@ -31,5 +31,5 @@ jobs:
         run: |
           zip -r function.zip .
           aws lambda update-function-code \
-            --function-name your-lambda-function-name \
+            --function-name Sandbox \
             --zip-file fileb://function.zip
